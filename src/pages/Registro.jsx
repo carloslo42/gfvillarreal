@@ -1,6 +1,6 @@
 // src/pages/Registro.jsx
 import { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { RAMAS, generarCodigo } from "../data/familyData";
 
@@ -24,8 +24,8 @@ export default function Registro() {
   const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({
     nombre: "", apodo: "", fechaNacimiento: "", ciudad: "",
-    ocupacion: "", pareja: "", generacion: "", rama: "",
-    intereses: [], mascotas: [], bio: "",
+    ocupacion: "", pareja: "", telefono: "", tutorRelacion: "",
+    generacion: "", rama: "", intereses: [], mascotas: [], bio: "",
   });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
@@ -39,8 +39,16 @@ export default function Registro() {
     }));
   };
 
-  const handleSubmitStep1 = (e) => {
+  const handleSubmitStep1 = async (e) => {
     e.preventDefault();
+    if (form.telefono) {
+      const q = query(collection(db, "miembros"), where("telefono", "==", form.telefono));
+      const snap = await getDocs(q);
+      if (!snap.empty && !form.tutorRelacion) {
+        alert("Este número ya está registrado. Ve a 👤 Mi Perfil para actualizar tus datos.");
+        return;
+      }
+    }
     setStep(2);
   };
 
@@ -67,8 +75,8 @@ export default function Registro() {
   const handleReset = () => {
     setForm({
       nombre: "", apodo: "", fechaNacimiento: "", ciudad: "",
-      ocupacion: "", pareja: "", generacion: "", rama: "",
-      intereses: [], mascotas: [], bio: "",
+      ocupacion: "", pareja: "", telefono: "", tutorRelacion: "",
+      generacion: "", rama: "", intereses: [], mascotas: [], bio: "",
     });
     setCodigo("");
     setStep(1);
@@ -105,6 +113,23 @@ export default function Registro() {
               <div>
                 <label className={labelClass}>Apodo / Como te conocen</label>
                 <input type="text" className={inputClass} placeholder="Ej: El Carlitos" value={form.apodo} onChange={(e) => update("apodo", e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>WhatsApp de contacto *</label>
+                <span className={hintClass}>Si eres menor de edad usa el WhatsApp de quien te registra</span>
+                <input type="tel" className={inputClass + " mt-1"} placeholder="Ej: 8441234567" value={form.telefono} onChange={(e) => update("telefono", e.target.value)} required />
+              </div>
+              <div>
+                <label className={labelClass}>¿De quién es ese WhatsApp?</label>
+                <span className={hintClass}>Solo si el número es de otra persona</span>
+                <select className={inputClass} value={form.tutorRelacion} onChange={(e) => update("tutorRelacion", e.target.value)}>
+                  <option value="">Es mi propio número</option>
+                  <option value="papa">Papá</option>
+                  <option value="mama">Mamá</option>
+                  <option value="abuelo">Abuelo/a</option>
+                  <option value="tutor">Tutor/a</option>
+                  <option value="otro">Otro familiar</option>
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -205,6 +230,13 @@ export default function Registro() {
                 <p className="text-xs text-green-500 font-sans mb-1">Tu código único</p>
                 <p className="text-2xl font-bold text-green-800 font-mono tracking-widest">{codigo}</p>
                 <p className="text-xs text-green-400 font-sans mt-1">Guardado en Firebase ✓</p>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+                <p className="text-xs text-orange-600 font-sans font-semibold">📱 Para editar tu perfil después</p>
+                <p className="text-sm text-orange-800 font-sans mt-1">Ve a <strong>👤 Mi Perfil</strong> y usa el número: <strong>{form.telefono}</strong></p>
+                {form.tutorRelacion && (
+                  <p className="text-xs text-orange-500 font-sans mt-1">Número registrado a nombre de: {form.tutorRelacion}</p>
+                )}
               </div>
               <div className="text-left space-y-2 text-sm font-sans border-t border-green-100 pt-4">
                 {[

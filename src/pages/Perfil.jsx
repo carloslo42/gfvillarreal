@@ -5,8 +5,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../firebase";
 
 export default function Perfil() {
-  const [paso, setPaso] = useState("buscar"); // buscar | editar | listo
-  const [codigo, setCodigo] = useState("");
+  const [paso, setPaso] = useState("buscar");
+  const [telefono, setTelefono] = useState("");
   const [miembro, setMiembro] = useState(null);
   const [docId, setDocId] = useState("");
   const [buscando, setBuscando] = useState(false);
@@ -18,19 +18,27 @@ export default function Perfil() {
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
   const buscarMiembro = async () => {
-    if (!codigo.trim()) return;
+    if (!telefono.trim()) return;
     setBuscando(true);
     try {
-      const q = query(collection(db, "miembros"), where("codigo", "==", codigo.trim()));
+      const q = query(collection(db, "miembros"), where("telefono", "==", telefono.trim()));
       const snap = await getDocs(q);
       if (snap.empty) {
-        alert("Código no encontrado. Verifica tu código VR-XXX-000");
+        alert("Número no encontrado. ¿Ya te registraste? Si eres menor de edad usa el número de tu papá/mamá.");
+        setBuscando(false);
+        return;
+      }
+      // Si hay varios registros con ese número (menores de edad)
+      if (snap.docs.length > 1) {
+        // Mostrar lista para elegir
+        const miembros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setMiembro(miembros);
+        setPaso("elegir");
         setBuscando(false);
         return;
       }
       const docData = snap.docs[0];
       setDocId(docData.id);
-      setMiembro(docData.data());
       setForm(docData.data());
       if (docData.data().fotoUrl) setFotoPreview(docData.data().fotoUrl);
       setPaso("editar");
@@ -40,6 +48,13 @@ export default function Perfil() {
     } finally {
       setBuscando(false);
     }
+  };
+
+  const elegirMiembro = (m) => {
+    setDocId(m.id);
+    setForm(m);
+    if (m.fotoUrl) setFotoPreview(m.fotoUrl);
+    setPaso("editar");
   };
 
   const handleFoto = (e) => {
@@ -85,44 +100,60 @@ export default function Perfil() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-6">
 
-          {/* ── PASO 1: Buscar por código ── */}
+          {/* ── BUSCAR ── */}
           {paso === "buscar" && (
             <div className="space-y-4">
               <div className="text-center py-4">
-                <p className="text-4xl mb-3">🔍</p>
-                <p className="text-green-700 font-semibold font-serif text-lg">Ingresa tu código familiar</p>
-                <p className="text-green-400 text-xs font-sans mt-1">El código que recibiste al registrarte (ej: VR-GUS-123)</p>
+                <p className="text-4xl mb-3">📱</p>
+                <p className="text-green-700 font-semibold font-serif text-lg">Ingresa tu WhatsApp</p>
+                <p className="text-green-400 text-xs font-sans mt-1">El mismo número que usaste al registrarte</p>
               </div>
               <input
-                type="text"
-                className={inputClass + " text-center font-mono text-lg tracking-widest uppercase"}
-                placeholder="VR-XXX-000"
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                type="tel"
+                className={inputClass + " text-center text-lg tracking-widest"}
+                placeholder="Ej: 8441234567"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
               />
-              <button
-                onClick={buscarMiembro}
-                disabled={buscando}
-                className={`w-full font-bold py-3 rounded-xl font-sans transition-all ${buscando ? "bg-green-300 text-white cursor-wait" : "bg-orange-500 hover:bg-orange-400 text-white"}`}
-              >
+              <button onClick={buscarMiembro} disabled={buscando}
+                className={`w-full font-bold py-3 rounded-xl font-sans transition-all ${buscando ? "bg-green-300 text-white cursor-wait" : "bg-orange-500 hover:bg-orange-400 text-white"}`}>
                 {buscando ? "Buscando..." : "Buscar mi perfil →"}
               </button>
             </div>
           )}
 
-          {/* ── PASO 2: Editar perfil ── */}
-          {paso === "editar" && miembro && (
+          {/* ── ELEGIR (varios con mismo número) ── */}
+          {paso === "elegir" && Array.isArray(miembro) && (
+            <div className="space-y-3">
+              <div className="text-center py-2">
+                <p className="text-2xl mb-2">👨‍👩‍👧‍👦</p>
+                <p className="text-green-700 font-semibold font-serif">¿Quién quiere editar su perfil?</p>
+                <p className="text-green-400 text-xs font-sans mt-1">Hay varios registros con este número</p>
+              </div>
+              {miembro.map((m) => (
+                <button key={m.id} onClick={() => elegirMiembro(m)}
+                  className="w-full text-left bg-green-50 hover:bg-orange-50 border border-green-200 hover:border-orange-300 rounded-xl px-4 py-3 transition-all">
+                  <p className="font-bold text-green-900 font-serif text-sm">{m.nombre}</p>
+                  <p className="text-xs text-green-500 font-sans">
+                    {m.generacion?.toUpperCase()} · Rama {m.rama?.replace(/-/g, " ")}
+                    {m.tutorRelacion && ` · Registrado por ${m.tutorRelacion}`}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── EDITAR ── */}
+          {paso === "editar" && (
             <div className="space-y-4">
               {/* Foto */}
               <div className="flex flex-col items-center gap-3 pb-4 border-b border-green-100">
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-orange-200 bg-green-50 flex items-center justify-center">
-                    {fotoPreview ? (
-                      <img src={fotoPreview} alt="foto" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-4xl">👤</span>
-                    )}
-                  </div>
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-orange-200 bg-green-50 flex items-center justify-center">
+                  {fotoPreview ? (
+                    <img src={fotoPreview} alt="foto" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-4xl">👤</span>
+                  )}
                 </div>
                 <label className="cursor-pointer bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 rounded-xl px-4 py-2 text-xs font-semibold font-sans transition-all">
                   📸 {fotoPreview ? "Cambiar foto" : "Subir foto"}
@@ -131,7 +162,6 @@ export default function Perfil() {
                 <p className="text-[10px] text-green-400 font-sans">JPG, PNG — máx 5MB</p>
               </div>
 
-              {/* Datos */}
               <div>
                 <label className={labelClass}>Nombre completo</label>
                 <input type="text" className={inputClass} value={form.nombre || ""} onChange={(e) => update("nombre", e.target.value)} />
@@ -163,24 +193,24 @@ export default function Perfil() {
                 <button onClick={() => setPaso("buscar")} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">← Atrás</button>
                 <button onClick={guardar} disabled={guardando}
                   className={`flex-1 font-bold py-3 rounded-xl font-sans transition-all ${guardando ? "bg-green-300 text-white cursor-wait" : "bg-orange-500 hover:bg-orange-400 text-white"}`}>
-                  {guardando ? "Guardando..." : "Guardar cambios ✓"}
+                  {guardando ? "Guardando..." : "Guardar ✓"}
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── PASO 3: Confirmación ── */}
+          {/* ── LISTO ── */}
           {paso === "listo" && (
             <div className="text-center space-y-4 py-4">
               <div className="text-5xl mb-2">✅</div>
               <h2 className="text-2xl font-bold text-green-900 font-serif">¡Perfil actualizado!</h2>
-              <p className="text-green-600 text-sm font-sans">Tus cambios quedaron guardados en la familia</p>
+              <p className="text-green-600 text-sm font-sans">Tus cambios quedaron guardados</p>
               {fotoPreview && (
                 <div className="flex justify-center">
                   <img src={fotoPreview} alt="foto" className="w-20 h-20 rounded-full object-cover border-4 border-orange-200" />
                 </div>
               )}
-              <button onClick={() => { setPaso("buscar"); setCodigo(""); setFoto(null); setFotoPreview(null); }}
+              <button onClick={() => { setPaso("buscar"); setTelefono(""); setFoto(null); setFotoPreview(null); }}
                 className="w-full border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">
                 Actualizar otro perfil
               </button>
