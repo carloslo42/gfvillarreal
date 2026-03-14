@@ -8,6 +8,7 @@ const GENERACIONES = [
   { value: "g2", label: "G2 — Hijo/a directo de Gustavo y Dora" },
   { value: "g3", label: "G3 — Nieto/a" },
   { value: "g4", label: "G4 — Bisnieto/a" },
+  { value: "g5", label: "G5 — Tataranieto/a" },
 ];
 
 const INTERESES = [
@@ -23,7 +24,8 @@ export default function Registro() {
   const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({
     nombre: "", apodo: "", fechaNacimiento: "", ciudad: "",
-    ocupacion: "", generacion: "", rama: "", intereses: [], mascotas: [], bio: "",
+    ocupacion: "", pareja: "", generacion: "", rama: "",
+    intereses: [], mascotas: [], bio: "",
   });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
@@ -63,7 +65,11 @@ export default function Registro() {
   };
 
   const handleReset = () => {
-    setForm({ nombre: "", apodo: "", fechaNacimiento: "", ciudad: "", ocupacion: "", generacion: "", rama: "", intereses: [], mascotas: [], bio: "" });
+    setForm({
+      nombre: "", apodo: "", fechaNacimiento: "", ciudad: "",
+      ocupacion: "", pareja: "", generacion: "", rama: "",
+      intereses: [], mascotas: [], bio: "",
+    });
     setCodigo("");
     setStep(1);
   };
@@ -103,14 +109,8 @@ export default function Registro() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>Fecha de nacimiento *</label>
-                  <span className={hintClass}>Formato: día/mes/año</span>
-                  <input
-                    type="date"
-                    className={inputClass + " mt-1"}
-                    value={form.fechaNacimiento}
-                    onChange={(e) => update("fechaNacimiento", e.target.value)}
-                    required
-                  />
+                  <span className={hintClass}>Formato: MM/DD/AAAA</span>
+                  <input type="date" className={inputClass + " mt-1"} value={form.fechaNacimiento} onChange={(e) => update("fechaNacimiento", e.target.value)} required />
                 </div>
                 <div>
                   <label className={labelClass}>Ciudad actual</label>
@@ -120,6 +120,10 @@ export default function Registro() {
               <div>
                 <label className={labelClass}>Ocupación</label>
                 <input type="text" className={inputClass} placeholder="Ej: Ingeniero, Maestra..." value={form.ocupacion} onChange={(e) => update("ocupacion", e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Pareja / Cónyuge</label>
+                <input type="text" className={inputClass} placeholder="Nombre completo de tu pareja" value={form.pareja} onChange={(e) => update("pareja", e.target.value)} />
               </div>
               <div>
                 <label className={labelClass}>Generación *</label>
@@ -157,7 +161,6 @@ export default function Registro() {
                   ))}
                 </div>
               </div>
-
               <div>
                 <label className={labelClass}>¿Tienes mascotas?</label>
                 <span className={hintClass}>Puedes seleccionar varias</span>
@@ -183,7 +186,6 @@ export default function Registro() {
                   ))}
                 </div>
               </div>
-
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setStep(1)} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">← Atrás</button>
                 <button onClick={handleSubmitStep2} disabled={guardando}
@@ -209,6 +211,7 @@ export default function Registro() {
                   ["Nombre", form.nombre],
                   ["Apodo", form.apodo || "—"],
                   ["Ciudad", form.ciudad || "—"],
+                  ["Pareja", form.pareja || "—"],
                   ["Rama", form.rama.replace(/-/g, " ") || "—"],
                   ["Intereses", form.intereses.join(", ") || "—"],
                   ["Mascotas", form.mascotas.join(", ") || "—"],

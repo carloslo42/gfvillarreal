@@ -50,6 +50,9 @@ function DetailPanel({ member, onClose }) {
           {member.fallecido && (
             <span className="mt-1 text-xs bg-slate-100 text-slate-500 px-3 py-0.5 rounded-full font-sans">In memoriam †</span>
           )}
+          {member.memoriam && (
+            <p className="mt-2 text-xs text-purple-500 font-sans italic text-center">{member.memoriam}</p>
+          )}
         </div>
         <div className="space-y-2 text-sm font-sans border-t border-green-100 pt-3">
           {member.generation === 1 && member.negocio && (
@@ -64,6 +67,12 @@ function DetailPanel({ member, onClose }) {
               <span className="text-gray-700">{member.born}</span>
             </div>
           )}
+          {member.fallecidoDate && (
+            <div className="flex justify-between">
+              <span className="text-green-700 font-semibold">Fallecimiento</span>
+              <span className="text-gray-700">{member.fallecidoDate}</span>
+            </div>
+          )}
           {member.location && (
             <div className="flex justify-between">
               <span className="text-green-700 font-semibold">Ciudad</span>
@@ -74,6 +83,12 @@ function DetailPanel({ member, onClose }) {
             <div className="flex justify-between">
               <span className="text-green-700 font-semibold">Ocupación</span>
               <span className="text-gray-700">{member.occupation}</span>
+            </div>
+          )}
+          {member.pareja && (
+            <div className="flex justify-between">
+              <span className="text-green-700 font-semibold">Pareja de</span>
+              <span className="text-gray-700">{member.pareja}</span>
             </div>
           )}
           {member.generation === 2 && (
@@ -92,13 +107,29 @@ function DetailPanel({ member, onClose }) {
         {member.bio && (
           <p className="mt-3 text-sm text-gray-500 italic border-t border-green-50 pt-3 font-sans">{member.bio}</p>
         )}
-        {(!member.born && !member.location && !member.occupation && !member.bio) && (
-          <p className="mt-3 text-sm text-gray-400 text-center font-sans">Perfil pendiente de completar</p>
-        )}
       </div>
     </div>
   );
 }
+
+// Miembros especiales In memoriam (no G1/G2)
+const IN_MEMORIAM = [
+  {
+    id: "memoriam-mariana",
+    name: "Mariana Marcela Vázquez Montemayor",
+    nickname: "Mariana",
+    shortName: "Mariana",
+    fallecido: true,
+    fallecidoDate: "Mayo 2025",
+    emoji: "🕊️",
+    color: "#a855f7",
+    pareja: "Carlos Villarreal (G2 · Rama Gustavo)",
+    branch: "gustavo",
+    memoriam: "Las estrellas que no se apagan 💙",
+    bio: "Amó profundamente a sus hijos y ellos a ella.",
+    generation: 3,
+  },
+];
 
 export default function Arbol() {
   const [selected, setSelected] = useState(null);
@@ -116,6 +147,7 @@ export default function Arbol() {
           <p className="text-green-600 text-sm mt-1 font-sans">Haz clic en cualquier miembro para ver su perfil</p>
         </div>
 
+        {/* G1 */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px flex-1 bg-green-300" />
@@ -135,6 +167,7 @@ export default function Arbol() {
           <div className="w-px h-8 bg-green-400" />
         </div>
 
+        {/* G2 */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px flex-1 bg-green-300" />
@@ -158,15 +191,36 @@ export default function Arbol() {
           )}
         </div>
 
+        {/* G3+ pendiente */}
         <div className="text-center mt-6 py-8 border-2 border-dashed border-green-200 rounded-2xl bg-white/50">
           <p className="text-green-400 text-lg mb-1">🌱</p>
           <p className="text-green-600 font-semibold font-serif">G3 · Nietos</p>
           <p className="text-green-400 text-xs font-sans mt-1">Se agregarán conforme la familia se registre</p>
         </div>
 
+        {/* ── IN MEMORIAM especial ── */}
+        <div className="mt-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-px flex-1 bg-purple-200" />
+            <span className="text-xs font-bold text-purple-600 uppercase tracking-widest font-sans bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+              💙 Las estrellas que no se apagan
+            </span>
+            <div className="h-px flex-1 bg-purple-200" />
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {IN_MEMORIAM.map((m) => (
+              <MemberNode key={m.id} member={m} onClick={setSelected} selected={selected} />
+            ))}
+          </div>
+          <p className="text-center text-xs text-purple-400 font-sans mt-3">
+            Siempre presentes en nuestra familia 🕊️
+          </p>
+        </div>
+
+        {/* Stats */}
         <div className="mt-8 grid grid-cols-3 gap-3">
           {[
-            { label: "Generaciones", value: "G1 – G4" },
+            { label: "Generaciones", value: "G1 – G5" },
             { label: "Hijos fundadores", value: "14" },
             { label: "Fallecidos", value: "4 †" },
           ].map((s) => (
