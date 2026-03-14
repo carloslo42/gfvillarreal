@@ -64,5 +64,4 @@ export function generarCodigo(branch, index) {
 }
 
 export const RAMAS = hijosCompletos
-  .filter((h) => !h.fallecido)
   .map((h) => ({ id: h.branch, label: `Rama ${h.shortName}`, parentId: h.id }));
