@@ -41,7 +41,7 @@ export const HIJOS = [
   { id: "g2-11", orden: 11, shortName: "Gabriela",         name: "Gabriela Villarreal Maury",            nickname: "Gaby",       fallecido: false, emoji: "👩", branch: "gabriela",            born: null, location: null, occupation: null, spouseId: null, childrenIds: [], bio: "" },
   { id: "g2-12", orden: 12, shortName: "Eduardo",          name: "Eduardo Villarreal Maury",             nickname: "Eduardo",    fallecido: true,  emoji: "🕊️", branch: "eduardo",              born: null, location: null, occupation: null, spouseId: null, childrenIds: [], bio: "" },
   { id: "g2-13", orden: 13, shortName: "Alejandro",        name: "Alejandro Villarreal Maury",           nickname: "Alejandro",  fallecido: false, emoji: "👨", branch: "alejandro",           born: null, location: null, occupation: null, spouseId: null, childrenIds: [], bio: "" },
-  { id: "g2-14", orden: 14, shortName: "Mª de los Santos", name: "María de los Santos Villarreal Maury", nickname: "Santos",     fallecido: false, emoji: "👩", branch: "maria-de-los-santos", born: null, location: null, occupation: null, spouseId: null, childrenIds: [], bio: "" },
+  { id: "g2-14", orden: 14, shortName: "María", name: "María de los Santos Villarreal Maury", nickname: "María",     fallecido: false, emoji: "👩", branch: "maria-de-los-santos", born: null, location: null, occupation: null, spouseId: null, childrenIds: [], bio: "" },
 ];
 
 const hijosCompletos = HIJOS.map((h) => ({
