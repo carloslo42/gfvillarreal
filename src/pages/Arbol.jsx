@@ -123,10 +123,10 @@ const IN_MEMORIAM = [
     fallecidoDate: "Mayo 2025",
     emoji: "🕊️",
     color: "#a855f7",
-    pareja: "Carlos Villarreal (G2 · Rama Gustavo)",
-    branch: "gustavo",
+    pareja: "Carlos López Villarreal (G3 · Rama Dora Irma)",
+    branch: "dora-irma",
     memoriam: "Las estrellas que no se apagan 💙",
-    bio: "Amó profundamente a sus hijos y ellos a ella.",
+    bio: "Mariana sembró amor en los hijos de Carlos, y ese lazo permanece vivo como parte de su legado.",
     generation: 3,
   },
 ];
