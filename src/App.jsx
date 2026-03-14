@@ -6,6 +6,7 @@ import Arbol from "./pages/Arbol";
 import Calendario from "./pages/Calendario";
 import Admin from "./pages/Admin";
 import Invitacion from "./pages/Invitacion";
+import Perfil from "./pages/Perfil";
 
 function NavBar() {
   const location = useLocation();
@@ -16,6 +17,7 @@ function NavBar() {
     { to: "/arbol", label: "🌳 Árbol" },
     { to: "/calendario", label: "🎂 Cumpleaños" },
     { to: "/registro", label: "✏️ Registro" },
+    { to: "/perfil", label: "👤 Mi Perfil" },
     { to: "/invitacion", label: "📲 Invitación" },
     { to: "/admin", label: "⚙️ Admin" },
   ];
@@ -60,6 +62,7 @@ export default function App() {
           <Route path="/arbol" element={<Arbol />} />
           <Route path="/calendario" element={<Calendario />} />
           <Route path="/registro" element={<Registro />} />
+          <Route path="/perfil" element={<Perfil />} />
           <Route path="/invitacion" element={<Invitacion />} />
           <Route path="/admin" element={<Admin />} />
         </Routes>
