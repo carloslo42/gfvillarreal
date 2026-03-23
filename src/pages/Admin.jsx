@@ -1,24 +1,50 @@
 // src/pages/Admin.jsx
-import { useState } from "react";
-import { familyData, HIJOS } from "../data/familyData";
+import { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import { HIJOS } from "../data/familyData";
 
-const TABS = ["Resumen", "Miembros", "Ramas", "Pendientes"];
+const TABS = ["Resumen", "Ramas", "Miembros", "Pendientes"];
 
 export default function Admin() {
   const [tab, setTab] = useState("Resumen");
+  const [miembros, setMiembros] = useState([]);
+  const [cargando, setCargando] = useState(true);
   const [search, setSearch] = useState("");
 
-  const totalMiembros = familyData.length;
-  const activos = familyData.filter((m) => !m.fallecido).length;
-  const fallecidos = familyData.filter((m) => m.fallecido).length;
-  const hijosActivos = HIJOS.filter((h) => !h.fallecido).length;
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const snap = await getDocs(collection(db, "miembros"));
+        setMiembros(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargar();
+  }, []);
+
+  const total = miembros.length;
+  const conFoto = miembros.filter(m => m.fotoUrl).length;
+  const conTelefono = miembros.filter(m => m.telefono).length;
+
+  // Conteo por rama
+  const conteoRamas = HIJOS.map(h => ({
+    ...h,
+    count: miembros.filter(m => m.rama === h.branch).length,
+  })).sort((a, b) => b.count - a.count);
+
+  const maxCount = Math.max(...conteoRamas.map(r => r.count), 1);
 
   const filtered = search
-    ? familyData.filter((m) =>
-        m.name.toLowerCase().includes(search.toLowerCase()) ||
-        (m.nickname && m.nickname.toLowerCase().includes(search.toLowerCase()))
+    ? miembros.filter(m =>
+        m.nombre?.toLowerCase().includes(search.toLowerCase()) ||
+        m.apodo?.toLowerCase().includes(search.toLowerCase()) ||
+        m.rama?.toLowerCase().includes(search.toLowerCase())
       )
-    : familyData;
+    : miembros;
 
   const inputClass = "w-full border border-green-200 rounded-xl px-3 py-2 text-sm font-sans text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white";
 
@@ -36,12 +62,12 @@ export default function Admin() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {/* Stats en vivo */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: "Total miembros", value: totalMiembros },
-            { label: "Activos", value: activos },
-            { label: "In memoriam", value: fallecidos },
-            { label: "Ramas activas", value: hijosActivos },
+            { label: "Total registrados", value: cargando ? "..." : total },
+            { label: "Con foto", value: cargando ? "..." : conFoto },
+            { label: "Con teléfono", value: cargando ? "..." : conTelefono },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-xl border border-green-100 p-3 text-center shadow-sm">
               <p className="text-2xl font-bold text-green-700 font-serif">{s.value}</p>
@@ -50,6 +76,7 @@ export default function Admin() {
           ))}
         </div>
 
+        {/* Tabs */}
         <div className="flex gap-1 bg-white border border-green-100 rounded-xl p-1 mb-5">
           {TABS.map((t) => (
             <button key={t} onClick={() => setTab(t)}
@@ -61,22 +88,23 @@ export default function Admin() {
           ))}
         </div>
 
+        {/* ── RESUMEN ── */}
         {tab === "Resumen" && (
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-green-100 p-5 shadow-sm">
               <h3 className="font-bold text-green-800 font-serif mb-3">📋 Estado del proyecto</h3>
               <div className="space-y-2">
                 {[
-                  { label: "Formulario de Registro",     status: "✅ Listo" },
-                  { label: "Árbol Familiar G1-G2",        status: "✅ Listo" },
-                  { label: "Tarjeta Mensual Cumpleaños",  status: "✅ Listo" },
-                  { label: "Landing Page",                status: "✅ Listo" },
-                  { label: "Tarjeta Invitación WhatsApp", status: "✅ Listo" },
-                  { label: "Panel Admin",                 status: "✅ Listo" },
-                  { label: "Firebase (base de datos)",    status: "⏳ Pendiente" },
-                  { label: "Vercel (hosting)",            status: "⏳ Pendiente" },
-                  { label: "G3 y G4 (nietos/bisnietos)",  status: "🗓 Fase 2" },
-                  { label: "Ancestros G-1, G-2...",       status: "🗓 Fase futura" },
+                  { label: "App publicada en Vercel", status: "✅ Listo" },
+                  { label: "Firebase conectado", status: "✅ Listo" },
+                  { label: "Registro con teléfono", status: "✅ Listo" },
+                  { label: "Foto de perfil", status: "✅ Listo" },
+                  { label: "Calendario en vivo", status: "✅ Listo" },
+                  { label: "Marcador de ramas", status: "✅ Listo" },
+                  { label: "Ligar registros entre miembros", status: "⏳ Pendiente" },
+                  { label: "Feed de noticias", status: "🗓 Fase 2" },
+                  { label: "Fotos múltiples por persona", status: "🗓 Fase 2" },
+                  { label: "Mapa del clan", status: "🗓 Fase 2" },
                 ].map((item) => (
                   <div key={item.label} className="flex justify-between items-center text-sm font-sans py-1 border-b border-green-50 last:border-0">
                     <span className="text-gray-700">{item.label}</span>
@@ -85,84 +113,104 @@ export default function Admin() {
                 ))}
               </div>
             </div>
-
-            <div className="bg-white rounded-2xl border border-green-100 p-5 shadow-sm">
-              <h3 className="font-bold text-green-800 font-serif mb-3">🗺 Roadmap</h3>
-              {[
-                { fase: "Fase 1", desc: "Registro, árbol G1-G2, landing, calendario, invitación", estado: "✅ Completa" },
-                { fase: "Fase 2", desc: "Perfil extendido, pareja, aniversario, Firebase", estado: "⏳ Próxima" },
-                { fase: "Fase 3", desc: "Calendario vivo automático", estado: "🗓 Planeada" },
-                { fase: "Fase 4", desc: "Árbol visual + estadísticas", estado: "🗓 Planeada" },
-                { fase: "Fase 5", desc: "Gamificación y dinámicas", estado: "🗓 Planeada" },
-              ].map((f) => (
-                <div key={f.fase} className="flex gap-3 text-sm font-sans py-2 border-b border-green-50 last:border-0">
-                  <span className="font-bold text-green-700 w-16 flex-shrink-0">{f.fase}</span>
-                  <span className="flex-1 text-gray-600">{f.desc}</span>
-                  <span className="text-green-600 flex-shrink-0">{f.estado}</span>
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
+        {/* ── RAMAS (Marcador en vivo) ── */}
+        {tab === "Ramas" && (
+          <div className="bg-white rounded-2xl border border-green-100 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-green-800 font-serif">🏆 Marcador de Ramas</h3>
+              <span className="text-xs text-green-500 font-sans">{total} registros totales</span>
+            </div>
+            <div className="space-y-3">
+              {conteoRamas.map((rama, i) => (
+                <div key={rama.id}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-sans w-5 text-center text-green-400">
+                      {i === 0 && rama.count > 0 ? "🥇" : i === 1 && rama.count > 0 ? "🥈" : i === 2 && rama.count > 0 ? "🥉" : ""}
+                    </span>
+                    <span className="text-sm font-semibold text-green-800 font-serif flex-1">
+                      {rama.shortName}
+                      {rama.fallecido && " †"}
+                    </span>
+                    <span className="text-sm font-bold text-orange-500 font-sans w-6 text-right">
+                      {rama.count}
+                    </span>
+                  </div>
+                  <div className="ml-7 h-2 bg-green-50 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${rama.count > 0 ? "bg-orange-400" : "bg-green-100"}`}
+                      style={{ width: `${(rama.count / maxCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!cargando && total === 0 && (
+              <p className="text-center text-green-400 text-sm font-sans mt-4">Aún no hay registros</p>
+            )}
+          </div>
+        )}
+
+        {/* ── MIEMBROS ── */}
         {tab === "Miembros" && (
           <div className="space-y-3">
-            <input type="text" className={inputClass} placeholder="Buscar familiar..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            <div className="space-y-2">
-              {filtered.map((m) => (
-                <div key={m.id} className="bg-white rounded-xl border border-green-100 px-4 py-3 flex items-center gap-3 shadow-sm">
-                  <span className="text-xl">{m.emoji || "👤"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-green-900 text-sm font-serif truncate">{m.name}</p>
-                    <p className="text-xs text-green-500 font-sans">G{m.generation} · {m.branch?.replace(/-/g, " ")}{m.fallecido && " · †"}</p>
+            <input type="text" className={inputClass} placeholder="Buscar por nombre, apodo o rama..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            {cargando ? (
+              <p className="text-center text-green-500 font-sans text-sm py-4">Cargando...</p>
+            ) : (
+              <div className="space-y-2">
+                {filtered.map((m) => (
+                  <div key={m.id} className="bg-white rounded-xl border border-green-100 px-4 py-3 flex items-center gap-3 shadow-sm">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0">
+                      {m.fotoUrl ? (
+                        <img src={m.fotoUrl} alt={m.nombre} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-lg">👤</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-green-900 text-sm font-serif truncate">{m.nombre}</p>
+                      <p className="text-xs text-green-500 font-sans">
+                        {m.generacion?.toUpperCase()} · Rama {m.rama?.replace(/-/g, " ")}
+                        {m.ciudad && ` · ${m.ciudad}`}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      {m.fotoUrl && <span className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full font-sans">📸</span>}
+                      {m.telefono && <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-sans">📱</span>}
+                    </div>
                   </div>
-                  <span className={`text-xs font-sans px-2 py-0.5 rounded-full ${m.born ? "bg-green-100 text-green-700" : "bg-orange-50 text-orange-400"}`}>
-                    {m.born ? "✓ Completo" : "Pendiente"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {tab === "Ramas" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {HIJOS.map((h) => (
-              <div key={h.id} className={`bg-white rounded-xl border p-4 shadow-sm ${h.fallecido ? "border-slate-200 opacity-60" : "border-green-100"}`}>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{h.emoji}</span>
-                  <div>
-                    <p className="font-bold text-green-900 text-sm font-serif">#{h.orden} · {h.shortName}{h.fallecido && " †"}</p>
-                    <p className="text-xs text-green-500 font-sans">Rama {h.branch?.replace(/-/g, " ")}</p>
-                  </div>
-                </div>
-                {!h.fallecido && (
-                  <div className="mt-2 pt-2 border-t border-green-50 flex justify-between text-xs font-sans text-gray-400">
-                    <span>Miembros registrados</span>
-                    <span className="font-bold text-orange-500">0</span>
-                  </div>
+                ))}
+                {filtered.length === 0 && (
+                  <p className="text-center text-green-400 text-sm font-sans py-4">No se encontraron resultados</p>
                 )}
               </div>
-            ))}
+            )}
           </div>
         )}
 
+        {/* ── PENDIENTES ── */}
         {tab === "Pendientes" && (
           <div className="bg-white rounded-2xl border border-green-100 p-5 shadow-sm">
-            <h3 className="font-bold text-green-800 font-serif mb-3">⚠️ Acciones pendientes</h3>
+            <h3 className="font-bold text-green-800 font-serif mb-3">⚠️ Próximos pasos</h3>
             <div className="space-y-3">
               {[
-                { prioridad: "Alta",  tarea: "Ejecutar npm run dev y verificar en localhost:5173", cmd: "npm run dev" },
-                { prioridad: "Media", tarea: "Crear cuenta en Firebase para la base de datos", cmd: null },
-                { prioridad: "Media", tarea: "Crear cuenta en Vercel para el hosting", cmd: null },
-                { prioridad: "Baja",  tarea: "Conectar dominio gfvillarreal.com desde Neubox", cmd: null },
+                { prioridad: "Alta", tarea: "Ligar registros entre miembros (pareja, hijos, padres)" },
+                { prioridad: "Media", tarea: "Feed de noticias — actividad reciente de la familia" },
+                { prioridad: "Media", tarea: "Fotos múltiples por persona (perfil, estado, portada)" },
+                { prioridad: "Media", tarea: "Editor de foto con recorte al subir" },
+                { prioridad: "Baja", tarea: "Mapa geográfico del clan" },
+                { prioridad: "Baja", tarea: "Gamificación — logros por rama" },
               ].map((p) => (
-                <div key={p.tarea} className="border border-green-100 rounded-xl p-3">
-                  <div className="flex items-start gap-2">
-                    <span className="text-[10px] font-bold font-sans px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 flex-shrink-0 mt-0.5">{p.prioridad}</span>
-                    <p className="text-sm text-gray-700 font-sans">{p.tarea}</p>
-                  </div>
-                  {p.cmd && <p className="mt-1 ml-14 text-xs font-mono bg-gray-50 text-gray-600 px-2 py-1 rounded-lg">{p.cmd}</p>}
+                <div key={p.tarea} className="border border-green-100 rounded-xl p-3 flex items-start gap-2">
+                  <span className={`text-[10px] font-bold font-sans px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 ${
+                    p.prioridad === "Alta" ? "bg-red-100 text-red-700" :
+                    p.prioridad === "Media" ? "bg-orange-100 text-orange-700" :
+                    "bg-green-100 text-green-700"
+                  }`}>{p.prioridad}</span>
+                  <p className="text-sm text-gray-700 font-sans">{p.tarea}</p>
                 </div>
               ))}
             </div>
