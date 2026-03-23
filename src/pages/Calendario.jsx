@@ -37,9 +37,9 @@ export default function Calendario() {
           .map(d => d.data())
           .filter(m => m.fechaNacimiento)
           .map(m => {
-            const fecha = new Date(m.fechaNacimiento);
-            const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-            const dia = String(fecha.getDate()).padStart(2, "0");
+            const partes = m.fechaNacimiento.split("-");
+            const mes = partes[1];
+            const dia = partes[2];
             return {
               nombre: m.nombre || "—",
               apodo: m.apodo || m.nombre?.split(" ")[0] || "—",
@@ -80,7 +80,6 @@ export default function Calendario() {
           </p>
         </div>
 
-        {/* Selector de mes */}
         <div className="flex flex-wrap gap-1 justify-center mb-6">
           {MESES.map((mes, i) => (
             <button key={mes} onClick={() => setMesActivo(i)}
@@ -92,7 +91,6 @@ export default function Calendario() {
           ))}
         </div>
 
-        {/* Tarjeta mensual */}
         <div className={`bg-gradient-to-br ${estacion.bg} border-2 ${estacion.border} rounded-3xl p-6 shadow-sm mb-6`}>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -137,12 +135,8 @@ export default function Calendario() {
           ) : (
             <div className="text-center py-8">
               <p className="text-4xl mb-2">🌿</p>
-              <p className="text-green-600 font-sans text-sm">
-                Sin cumpleaños registrados en {MESES[mesActivo]}
-              </p>
-              <p className="text-green-400 font-sans text-xs mt-1">
-                Aparecerán conforme la familia se registre
-              </p>
+              <p className="text-green-600 font-sans text-sm">Sin cumpleaños en {MESES[mesActivo]}</p>
+              <p className="text-green-400 font-sans text-xs mt-1">Aparecerán conforme la familia se registre</p>
             </div>
           )}
 
@@ -152,7 +146,6 @@ export default function Calendario() {
           </div>
         </div>
 
-        {/* Próximos cumpleaños */}
         {!cargando && proximos.length > 0 && (
           <div className="bg-white rounded-2xl border border-green-100 p-4 shadow-sm">
             <h3 className="text-sm font-bold text-green-800 font-serif mb-3">🔔 Próximos cumpleaños</h3>
@@ -183,7 +176,6 @@ export default function Calendario() {
           <div className="text-center py-6 bg-white rounded-2xl border border-green-100">
             <p className="text-4xl mb-2">🌱</p>
             <p className="text-green-600 font-sans text-sm">Aún no hay registros con fecha de nacimiento</p>
-            <p className="text-green-400 font-sans text-xs mt-1">Conforme la familia se registre aparecerán aquí</p>
           </div>
         )}
 
