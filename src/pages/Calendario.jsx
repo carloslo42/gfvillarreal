@@ -1,11 +1,7 @@
 // src/pages/Calendario.jsx
-import { useState } from "react";
-
-const CUMPLEANOS_EJEMPLO = [
-  { nombre: "Dora Irma Villarreal Maury", apodo: "Dora Irma", fecha: "03-15", rama: "dora-irma", emoji: "👩", generacion: "G2" },
-  { nombre: "Gustavo Villarreal Maury",   apodo: "Gustavo",   fecha: "03-22", rama: "gustavo",   emoji: "👨", generacion: "G2" },
-  { nombre: "Celia Villarreal Maury",     apodo: "Celia",     fecha: "04-05", rama: "celia",     emoji: "👩", generacion: "G2" },
-];
+import { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 
 const MESES = [
   "Enero","Febrero","Marzo","Abril","Mayo","Junio",
@@ -30,25 +26,61 @@ const ESTACIONES = {
 export default function Calendario() {
   const now = new Date();
   const [mesActivo, setMesActivo] = useState(now.getMonth());
+  const [miembros, setMiembros] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const snap = await getDocs(collection(db, "miembros"));
+        const datos = snap.docs
+          .map(d => d.data())
+          .filter(m => m.fechaNacimiento)
+          .map(m => {
+            const fecha = new Date(m.fechaNacimiento);
+            const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+            const dia = String(fecha.getDate()).padStart(2, "0");
+            return {
+              nombre: m.nombre || "—",
+              apodo: m.apodo || m.nombre?.split(" ")[0] || "—",
+              fecha: `${mes}-${dia}`,
+              rama: m.rama || "—",
+              generacion: m.generacion || "—",
+              emoji: "👤",
+              fotoUrl: m.fotoUrl || null,
+            };
+          })
+          .sort((a, b) => a.fecha.localeCompare(b.fecha));
+        setMiembros(datos);
+      } catch (error) {
+        console.error("Error cargando cumpleaños:", error);
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargar();
+  }, []);
 
   const estacion = ESTACIONES[mesActivo];
   const mesStr = String(mesActivo + 1).padStart(2, "0");
-  const cumplesMes = CUMPLEANOS_EJEMPLO.filter((c) => c.fecha.startsWith(mesStr));
+  const cumplesMes = miembros.filter((c) => c.fecha.startsWith(mesStr));
 
   const hoy = `${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
-  const proximos = CUMPLEANOS_EJEMPLO
+  const proximos = miembros
     .filter((c) => c.fecha >= hoy)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
-    .slice(0, 3);
+    .slice(0, 5);
 
   return (
     <div className="min-h-screen bg-green-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-green-900 font-serif">🎂 Tarjeta de Cumpleaños</h1>
-          <p className="text-green-600 text-sm mt-1 font-sans">Cumpleañeros del mes · Familia Villarreal</p>
+          <h1 className="text-3xl font-bold text-green-900 font-serif">🎂 Cumpleaños</h1>
+          <p className="text-green-600 text-sm mt-1 font-sans">
+            {cargando ? "Cargando..." : `${miembros.length} miembros registrados`}
+          </p>
         </div>
 
+        {/* Selector de mes */}
         <div className="flex flex-wrap gap-1 justify-center mb-6">
           {MESES.map((mes, i) => (
             <button key={mes} onClick={() => setMesActivo(i)}
@@ -60,6 +92,7 @@ export default function Calendario() {
           ))}
         </div>
 
+        {/* Tarjeta mensual */}
         <div className={`bg-gradient-to-br ${estacion.bg} border-2 ${estacion.border} rounded-3xl p-6 shadow-sm mb-6`}>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -70,16 +103,28 @@ export default function Calendario() {
             <div className="text-5xl opacity-60">{estacion.emoji}</div>
           </div>
 
-          {cumplesMes.length > 0 ? (
+          {cargando ? (
+            <div className="text-center py-8">
+              <p className="text-green-500 font-sans text-sm">Cargando cumpleaños...</p>
+            </div>
+          ) : cumplesMes.length > 0 ? (
             <div className="space-y-3">
-              {cumplesMes.map((c) => {
+              {cumplesMes.map((c, i) => {
                 const dia = c.fecha.split("-")[1];
                 return (
-                  <div key={c.nombre} className="bg-white/70 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm">
-                    <div className="w-11 h-11 rounded-full bg-orange-100 border-2 border-orange-300 flex items-center justify-center text-xl flex-shrink-0">{c.emoji}</div>
+                  <div key={i} className="bg-white/70 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm">
+                    <div className="w-11 h-11 rounded-full overflow-hidden bg-orange-100 border-2 border-orange-300 flex items-center justify-center flex-shrink-0">
+                      {c.fotoUrl ? (
+                        <img src={c.fotoUrl} alt={c.apodo} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl">{c.emoji}</span>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-green-900 text-sm font-serif leading-tight">{c.nombre}</p>
-                      <p className="text-xs text-green-600 font-sans">"{c.apodo}" · {c.generacion} · Rama {c.rama.replace(/-/g," ")}</p>
+                      <p className="text-xs text-green-600 font-sans">
+                        "{c.apodo}" · {c.generacion?.toUpperCase()} · Rama {c.rama?.replace(/-/g," ")}
+                      </p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-2xl font-bold text-orange-500 font-serif">{dia}</p>
@@ -92,28 +137,41 @@ export default function Calendario() {
           ) : (
             <div className="text-center py-8">
               <p className="text-4xl mb-2">🌿</p>
-              <p className="text-green-600 font-sans text-sm">Sin cumpleaños registrados en {MESES[mesActivo]}</p>
-              <p className="text-green-400 font-sans text-xs mt-1">Los cumpleaños aparecerán conforme la familia se registre</p>
+              <p className="text-green-600 font-sans text-sm">
+                Sin cumpleaños registrados en {MESES[mesActivo]}
+              </p>
+              <p className="text-green-400 font-sans text-xs mt-1">
+                Aparecerán conforme la familia se registre
+              </p>
             </div>
           )}
 
           <div className="mt-4 pt-3 border-t border-white/50 flex items-center justify-between">
             <p className="text-xs text-green-600 font-sans">🌳 gfvillarreal.com</p>
-            <p className="text-xs text-green-400 font-sans">{new Date().getFullYear()}</p>
+            <p className="text-xs text-green-400 font-sans">{now.getFullYear()}</p>
           </div>
         </div>
 
-        {proximos.length > 0 && (
+        {/* Próximos cumpleaños */}
+        {!cargando && proximos.length > 0 && (
           <div className="bg-white rounded-2xl border border-green-100 p-4 shadow-sm">
             <h3 className="text-sm font-bold text-green-800 font-serif mb-3">🔔 Próximos cumpleaños</h3>
             <div className="space-y-2">
-              {proximos.map((c) => {
+              {proximos.map((c, i) => {
                 const [mm, dd] = c.fecha.split("-");
                 return (
-                  <div key={c.nombre} className="flex items-center gap-3 text-sm font-sans">
-                    <span className="text-lg">{c.emoji}</span>
+                  <div key={i} className="flex items-center gap-3 text-sm font-sans">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0">
+                      {c.fotoUrl ? (
+                        <img src={c.fotoUrl} alt={c.apodo} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-sm">👤</span>
+                      )}
+                    </div>
                     <span className="flex-1 text-gray-700">{c.apodo}</span>
-                    <span className="text-orange-500 font-bold">{dd} {MESES[parseInt(mm) - 1].substring(0, 3)}</span>
+                    <span className="text-orange-500 font-bold">
+                      {dd} {MESES[parseInt(mm) - 1].substring(0, 3)}
+                    </span>
                   </div>
                 );
               })}
@@ -121,8 +179,16 @@ export default function Calendario() {
           </div>
         )}
 
+        {!cargando && miembros.length === 0 && (
+          <div className="text-center py-6 bg-white rounded-2xl border border-green-100">
+            <p className="text-4xl mb-2">🌱</p>
+            <p className="text-green-600 font-sans text-sm">Aún no hay registros con fecha de nacimiento</p>
+            <p className="text-green-400 font-sans text-xs mt-1">Conforme la familia se registre aparecerán aquí</p>
+          </div>
+        )}
+
         <p className="text-center text-xs text-green-400 font-sans mt-6">
-          Esta tarjeta se puede compartir por WhatsApp cada mes · Diseño por época del año
+          Se actualiza automáticamente con cada nuevo registro 🌳
         </p>
       </div>
     </div>
