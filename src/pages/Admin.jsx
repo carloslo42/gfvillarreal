@@ -31,10 +31,10 @@ export default function Admin() {
   const conTelefono = miembros.filter(m => m.telefono).length;
 
   // Conteo por rama
-  const conteoRamas = HIJOS.map(h => ({
-    ...h,
-    count: miembros.filter(m => m.rama === h.branch).length,
-  })).sort((a, b) => b.count - a.count);
+ const conteoRamas = HIJOS.map(h => ({
+  ...h,
+  count: miembros.filter(m => m.rama === h.branch || m.rama === h.shortName.toLowerCase()).length,
+})).sort((a, b) => b.count - a.count);
 
   const maxCount = Math.max(...conteoRamas.map(r => r.count), 1);
 
