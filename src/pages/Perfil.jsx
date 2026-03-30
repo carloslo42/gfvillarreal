@@ -4,7 +4,23 @@ import { collection, query, where, getDocs, doc, updateDoc } from "firebase/fire
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../firebase";
 
-const RELACIONES = ["Pareja / Cónyuge", "Padre", "Madre", "Hijo/a", "Hermano/a", "Otro"];
+const RELACIONES = [
+  "Pareja / Cónyuge",
+  "Estrella que no se apaga (pareja) 🕊️",
+  "Padre",
+  "Madre",
+  "Hijo/a",
+  "Estrella que no se apaga (hijo/a) 🕊️",
+  "Hermano/a",
+  "Estrella que no se apaga (hermano/a) 🕊️",
+  "Abuelo/a",
+  "Nieto/a",
+  "Tío/a",
+  "Sobrino/a",
+  "Primo/a",
+  "Otro familiar",
+  "Estrella que no se apaga 🕊️",
+];
 
 export default function Perfil() {
   const [paso, setPaso] = useState("buscar");
