@@ -104,6 +104,8 @@ export default function Registro() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-6">
+
+          {/* ── STEP 1 ── */}
           {step === 1 && (
             <form onSubmit={handleSubmitStep1} className="space-y-4">
               <div>
@@ -172,6 +174,7 @@ export default function Registro() {
             </form>
           )}
 
+          {/* ── STEP 2 ── */}
           {step === 2 && (
             <div className="space-y-5">
               <div>
@@ -221,6 +224,7 @@ export default function Registro() {
             </div>
           )}
 
+          {/* ── STEP 3 ── */}
           {step === 3 && (
             <div className="text-center space-y-4">
               <div className="text-5xl mb-2">🎉</div>
@@ -254,9 +258,13 @@ export default function Registro() {
                   </div>
                 ))}
               </div>
-              <button onClick={handleReset} className="w-full mt-4 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">Registrar otro miembro</button>
+              <div className="flex gap-3 mt-4">
+                <button onClick={() => window.location.href = "/"} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl font-sans">🏠 Ir al inicio</button>
+                <button onClick={handleReset} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">Registrar otro</button>
+              </div>
             </div>
           )}
+
         </div>
       </div>
     </div>

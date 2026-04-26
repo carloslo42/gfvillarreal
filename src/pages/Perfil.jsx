@@ -32,11 +32,11 @@ export default function Perfil() {
   const [foto, setFoto] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
   const [form, setForm] = useState({});
-  const [tab, setTab] = useState("datos"); // datos | conexiones
+  const [tab, setTab] = useState("datos");
   const [todosMiembros, setTodosMiembros] = useState([]);
   const [busquedaFamiliar, setBusquedaFamiliar] = useState("");
-  const [conexiones, setConexiones] = useState([]); // [{id, nombre, relacion}]
-  const [agregando, setAgregando] = useState(null); // miembro seleccionado para agregar
+  const [conexiones, setConexiones] = useState([]);
+  const [agregando, setAgregando] = useState(null);
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -62,11 +62,8 @@ export default function Perfil() {
       setForm(docData.data());
       setConexiones(docData.data().conexiones || []);
       if (docData.data().fotoUrl) setFotoPreview(docData.data().fotoUrl);
-
-      // Cargar todos los miembros para buscar conexiones
       const todos = await getDocs(collection(db, "miembros"));
       setTodosMiembros(todos.docs.map(d => ({ id: d.id, ...d.data() })).filter(m => m.id !== docData.id));
-
       setPaso("editar");
     } catch (error) {
       console.error(error);
@@ -131,6 +128,17 @@ export default function Perfil() {
     }
   };
 
+  const resetear = () => {
+    setPaso("buscar");
+    setTelefono("");
+    setFoto(null);
+    setFotoPreview(null);
+    setConexiones([]);
+    setForm({});
+    setDocId("");
+    setMiembro(null);
+  };
+
   const inputClass = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm font-sans text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white";
   const labelClass = "block text-xs font-semibold text-green-700 mb-1 font-sans uppercase tracking-wide";
 
@@ -188,7 +196,6 @@ export default function Perfil() {
           {/* ── EDITAR ── */}
           {paso === "editar" && (
             <div>
-              {/* Foto y nombre */}
               <div className="flex flex-col items-center gap-2 pb-4 border-b border-green-100 mb-4">
                 <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-orange-200 bg-green-50 flex items-center justify-center">
                   {fotoPreview ? <img src={fotoPreview} alt="foto" className="w-full h-full object-cover" /> : <span className="text-4xl">👤</span>}
@@ -200,7 +207,6 @@ export default function Perfil() {
                 <p className="font-bold text-green-900 font-serif">{form.nombre}</p>
               </div>
 
-              {/* Tabs */}
               <div className="flex gap-1 bg-green-50 rounded-xl p-1 mb-4">
                 {["datos", "conexiones"].map((t) => (
                   <button key={t} onClick={() => setTab(t)}
@@ -241,7 +247,6 @@ export default function Perfil() {
               {/* ── TAB CONEXIONES ── */}
               {tab === "conexiones" && (
                 <div className="space-y-4">
-                  {/* Conexiones existentes */}
                   {conexiones.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs font-semibold text-green-700 font-sans uppercase tracking-wide">Mis conexiones</p>
@@ -259,14 +264,12 @@ export default function Perfil() {
                     </div>
                   )}
 
-                  {/* Buscar familiar */}
                   <div>
                     <p className="text-xs font-semibold text-green-700 font-sans uppercase tracking-wide mb-2">Agregar familiar</p>
                     <input type="text" className={inputClass} placeholder="Busca por nombre o apodo..."
                       value={busquedaFamiliar} onChange={(e) => { setBusquedaFamiliar(e.target.value); setAgregando(null); }} />
                   </div>
 
-                  {/* Resultados de búsqueda */}
                   {busquedaFamiliar && (
                     <div className="space-y-2">
                       {familiaresFiltered.length === 0 ? (
@@ -281,8 +284,6 @@ export default function Perfil() {
                                 {m.generacion?.toUpperCase()} · Rama {m.rama?.replace(/-/g, " ")}
                               </p>
                             </button>
-
-                            {/* Selector de relación */}
                             {agregando?.id === m.id && (
                               <div className="mt-1 p-2 bg-orange-50 rounded-xl border border-orange-200">
                                 <p className="text-xs text-orange-600 font-sans mb-2">¿Qué relación tiene contigo?</p>
@@ -311,7 +312,6 @@ export default function Perfil() {
                 </div>
               )}
 
-              {/* Botón guardar */}
               <div className="flex gap-3 pt-4 mt-4 border-t border-green-100">
                 <button onClick={() => setPaso("buscar")} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">← Atrás</button>
                 <button onClick={guardar} disabled={guardando}
@@ -341,12 +341,13 @@ export default function Perfil() {
                   ))}
                 </div>
               )}
-              <button onClick={() => { setPaso("buscar"); setTelefono(""); setFoto(null); setFotoPreview(null); setConexiones([]); }}
-                className="w-full border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">
-                Actualizar otro perfil
-              </button>
+              <div className="flex gap-3 mt-4">
+                <button onClick={() => window.location.href = "/"} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl font-sans">🏠 Ir al inicio</button>
+                <button onClick={resetear} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">Actualizar otro</button>
+              </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
