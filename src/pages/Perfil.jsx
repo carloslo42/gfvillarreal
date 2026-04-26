@@ -1,349 +1,266 @@
-// src/pages/Perfil.jsx
+// src/pages/Registro.jsx
 import { useState } from "react";
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "../firebase";
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import { RAMAS, generarCodigo } from "../data/familyData";
 
-const RELACIONES = [
-  "Pareja / Cónyuge",
-  "Estrella que no se apaga (pareja) 🕊️",
-  "Padre",
-  "Madre",
-  "Hijo/a",
-  "Estrella que no se apaga (hijo/a) 🕊️",
-  "Hermano/a",
-  "Estrella que no se apaga (hermano/a) 🕊️",
-  "Abuelo/a",
-  "Nieto/a",
-  "Tío/a",
-  "Sobrino/a",
-  "Primo/a",
-  "Otro familiar",
-  "Estrella que no se apaga 🕊️",
+const GENERACIONES = [
+  { value: "g2", label: "G2 — Hijo/a directo de Gustavo y Dora" },
+  { value: "g3", label: "G3 — Nieto/a" },
+  { value: "g4", label: "G4 — Bisnieto/a" },
+  { value: "g5", label: "G5 — Tataranieto/a" },
 ];
 
-export default function Perfil() {
-  const [paso, setPaso] = useState("buscar");
-  const [telefono, setTelefono] = useState("");
-  const [miembro, setMiembro] = useState(null);
-  const [docId, setDocId] = useState("");
-  const [buscando, setBuscando] = useState(false);
+const INTERESES = [
+  "Música", "Cocina", "Deportes", "Viajes", "Lectura",
+  "Tecnología", "Arte", "Cine", "Naturaleza", "Negocios",
+];
+
+const MASCOTAS = ["Perro 🐶", "Gato 🐱", "Ave 🐦", "Pez 🐠", "Tortuga 🐢", "Conejo 🐰", "Ninguna", "Otra"];
+
+export default function Registro() {
+  const [step, setStep] = useState(1);
+  const [codigo, setCodigo] = useState("");
   const [guardando, setGuardando] = useState(false);
-  const [foto, setFoto] = useState(null);
-  const [fotoPreview, setFotoPreview] = useState(null);
-  const [form, setForm] = useState({});
-  const [tab, setTab] = useState("datos");
-  const [todosMiembros, setTodosMiembros] = useState([]);
-  const [busquedaFamiliar, setBusquedaFamiliar] = useState("");
-  const [conexiones, setConexiones] = useState([]);
-  const [agregando, setAgregando] = useState(null);
+  const [form, setForm] = useState({
+    nombre: "", apodo: "", fechaNacimiento: "", ciudad: "",
+    ocupacion: "", pareja: "", telefono: "", tutorRelacion: "",
+    generacion: "", rama: "", intereses: [], mascotas: [], bio: "",
+  });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
-  const buscarMiembro = async () => {
-    if (!telefono.trim()) return;
-    setBuscando(true);
-    try {
-      const q = query(collection(db, "miembros"), where("telefono", "==", telefono.trim()));
+  const toggleItem = (field, item) => {
+    setForm((f) => ({
+      ...f,
+      [field]: f[field].includes(item)
+        ? f[field].filter((i) => i !== item)
+        : [...f[field], item],
+    }));
+  };
+
+  const handleSubmitStep1 = async (e) => {
+    e.preventDefault();
+    if (form.telefono) {
+      const q = query(collection(db, "miembros"), where("telefono", "==", form.telefono));
       const snap = await getDocs(q);
-      if (snap.empty) {
-        alert("Número no encontrado. ¿Ya te registraste?");
-        setBuscando(false);
+      if (!snap.empty && !form.tutorRelacion) {
+        alert("Este número ya está registrado. Ve a 👤 Mi Perfil para actualizar tus datos.");
         return;
       }
-      if (snap.docs.length > 1) {
-        setMiembro(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setPaso("elegir");
-        setBuscando(false);
-        return;
-      }
-      const docData = snap.docs[0];
-      setDocId(docData.id);
-      setForm(docData.data());
-      setConexiones(docData.data().conexiones || []);
-      if (docData.data().fotoUrl) setFotoPreview(docData.data().fotoUrl);
-      const todos = await getDocs(collection(db, "miembros"));
-      setTodosMiembros(todos.docs.map(d => ({ id: d.id, ...d.data() })).filter(m => m.id !== docData.id));
-      setPaso("editar");
-    } catch (error) {
-      console.error(error);
-      alert("Error al buscar. Intenta de nuevo.");
-    } finally {
-      setBuscando(false);
     }
+    setStep(2);
   };
 
-  const elegirMiembro = async (m) => {
-    setDocId(m.id);
-    setForm(m);
-    setConexiones(m.conexiones || []);
-    if (m.fotoUrl) setFotoPreview(m.fotoUrl);
-    const todos = await getDocs(collection(db, "miembros"));
-    setTodosMiembros(todos.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== m.id));
-    setPaso("editar");
-  };
-
-  const handleFoto = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert("La foto debe ser menor a 5MB"); return; }
-    setFoto(file);
-    setFotoPreview(URL.createObjectURL(file));
-  };
-
-  const agregarConexion = (miembroSeleccionado, relacion) => {
-    if (conexiones.find(c => c.id === miembroSeleccionado.id)) {
-      alert("Ya está agregado como familiar");
-      return;
-    }
-    setConexiones(prev => [...prev, {
-      id: miembroSeleccionado.id,
-      nombre: miembroSeleccionado.nombre,
-      relacion,
-    }]);
-    setAgregando(null);
-    setBusquedaFamiliar("");
-  };
-
-  const quitarConexion = (id) => {
-    setConexiones(prev => prev.filter(c => c.id !== id));
-  };
-
-  const guardar = async () => {
+  const handleSubmitStep2 = async () => {
     setGuardando(true);
     try {
-      let fotoUrl = form.fotoUrl || "";
-      if (foto) {
-        const storageRef = ref(storage, `fotos/${docId}`);
-        await uploadBytes(storageRef, foto);
-        fotoUrl = await getDownloadURL(storageRef);
-      }
-      await updateDoc(doc(db, "miembros", docId), { ...form, fotoUrl, conexiones });
-      setPaso("listo");
+      const randa = Math.floor(Math.random() * 900) + 100;
+      const cod = generarCodigo(form.rama || "vrl", randa);
+      await addDoc(collection(db, "miembros"), {
+        ...form,
+        codigo: cod,
+        fechaRegistro: new Date().toISOString(),
+      });
+      setCodigo(cod);
+      setStep(3);
     } catch (error) {
-      console.error(error);
+      console.error("Error guardando:", error);
       alert("Error al guardar. Intenta de nuevo.");
     } finally {
       setGuardando(false);
     }
   };
 
-  const resetear = () => {
-    setPaso("buscar");
-    setTelefono("");
-    setFoto(null);
-    setFotoPreview(null);
-    setConexiones([]);
-    setForm({});
-    setDocId("");
-    setMiembro(null);
+  const handleReset = () => {
+    setForm({
+      nombre: "", apodo: "", fechaNacimiento: "", ciudad: "",
+      ocupacion: "", pareja: "", telefono: "", tutorRelacion: "",
+      generacion: "", rama: "", intereses: [], mascotas: [], bio: "",
+    });
+    setCodigo("");
+    setStep(1);
   };
 
   const inputClass = "w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm font-sans text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white";
   const labelClass = "block text-xs font-semibold text-green-700 mb-1 font-sans uppercase tracking-wide";
-
-  const familiaresFiltered = todosMiembros.filter(m =>
-    m.nombre?.toLowerCase().includes(busquedaFamiliar.toLowerCase()) ||
-    m.apodo?.toLowerCase().includes(busquedaFamiliar.toLowerCase())
-  ).slice(0, 8);
+  const hintClass = "block text-[10px] text-green-400 font-sans mt-0.5";
 
   return (
     <div className="min-h-screen bg-green-50 py-10 px-4">
       <div className="max-w-lg mx-auto">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-green-900 font-serif">👤 Mi Perfil</h1>
-          <p className="text-green-600 text-sm mt-1 font-sans">Actualiza tu información y conexiones familiares</p>
+          <h1 className="text-3xl font-bold text-green-900 font-serif">✏️ Registro Familiar</h1>
+          <p className="text-green-600 text-sm mt-1 font-sans">Únete a La Gran Familia Villarreal</p>
+        </div>
+
+        <div className="flex gap-2 mb-6">
+          {["Datos básicos", "Intereses", "Confirmación"].map((s, i) => (
+            <div key={s} className="flex-1">
+              <div className={`h-2 rounded-full transition-all ${step > i + 1 ? "bg-green-600" : step === i + 1 ? "bg-orange-500" : "bg-green-100"}`} />
+              <p className={`text-[10px] mt-1 font-sans text-center ${step === i + 1 ? "text-orange-500 font-bold" : "text-green-400"}`}>{s}</p>
+            </div>
+          ))}
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-6">
 
-          {/* ── BUSCAR ── */}
-          {paso === "buscar" && (
-            <div className="space-y-4">
-              <div className="text-center py-4">
-                <p className="text-4xl mb-3">📱</p>
-                <p className="text-green-700 font-semibold font-serif text-lg">Ingresa tu WhatsApp</p>
-                <p className="text-green-400 text-xs font-sans mt-1">El mismo número que usaste al registrarte</p>
+          {/* ── STEP 1 ── */}
+          {step === 1 && (
+            <form onSubmit={handleSubmitStep1} className="space-y-4">
+              <div>
+                <label className={labelClass}>Nombre completo *</label>
+                <input type="text" className={inputClass} placeholder="Ej: Carlos Villarreal Maury" value={form.nombre} onChange={(e) => update("nombre", e.target.value)} required />
               </div>
-              <input type="tel" className={inputClass + " text-center text-lg tracking-widest"}
-                placeholder="Ej: 8441234567" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-              <button onClick={buscarMiembro} disabled={buscando}
-                className={`w-full font-bold py-3 rounded-xl font-sans transition-all ${buscando ? "bg-green-300 text-white cursor-wait" : "bg-orange-500 hover:bg-orange-400 text-white"}`}>
-                {buscando ? "Buscando..." : "Buscar mi perfil →"}
-              </button>
-            </div>
+              <div>
+                <label className={labelClass}>Apodo / Como te conocen</label>
+                <input type="text" className={inputClass} placeholder="Ej: El Carlitos" value={form.apodo} onChange={(e) => update("apodo", e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>WhatsApp de contacto *</label>
+                <span className={hintClass}>Si eres menor de edad usa el WhatsApp de quien te registra</span>
+                <input type="tel" className={inputClass + " mt-1"} placeholder="Ej: 8441234567" value={form.telefono} onChange={(e) => update("telefono", e.target.value)} required />
+              </div>
+              <div>
+                <label className={labelClass}>¿De quién es ese WhatsApp?</label>
+                <span className={hintClass}>Solo si el número es de otra persona</span>
+                <select className={inputClass} value={form.tutorRelacion} onChange={(e) => update("tutorRelacion", e.target.value)}>
+                  <option value="">Es mi propio número</option>
+                  <option value="papa">Papá</option>
+                  <option value="mama">Mamá</option>
+                  <option value="abuelo">Abuelo/a</option>
+                  <option value="tutor">Tutor/a</option>
+                  <option value="otro">Otro familiar</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>Fecha de nacimiento *</label>
+                  <span className={hintClass}>Formato: MM/DD/AAAA</span>
+                  <input type="date" className={inputClass + " mt-1"} value={form.fechaNacimiento} onChange={(e) => update("fechaNacimiento", e.target.value)} required />
+                </div>
+                <div>
+                  <label className={labelClass}>Ciudad actual</label>
+                  <input type="text" className={inputClass + " mt-5"} placeholder="Ej: Saltillo" value={form.ciudad} onChange={(e) => update("ciudad", e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Ocupación</label>
+                <input type="text" className={inputClass} placeholder="Ej: Ingeniero, Maestra..." value={form.ocupacion} onChange={(e) => update("ocupacion", e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Pareja / Cónyuge</label>
+                <input type="text" className={inputClass} placeholder="Nombre completo de tu pareja" value={form.pareja} onChange={(e) => update("pareja", e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Generación *</label>
+                <select className={inputClass} value={form.generacion} onChange={(e) => update("generacion", e.target.value)} required>
+                  <option value="">Selecciona tu generación</option>
+                  {GENERACIONES.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Rama familiar *</label>
+                <select className={inputClass} value={form.rama} onChange={(e) => update("rama", e.target.value)} required>
+                  <option value="">¿A qué rama perteneces?</option>
+                  {RAMAS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Algo sobre ti</label>
+                <textarea className={inputClass + " resize-none"} rows={3} placeholder="Una frase que te describa..." value={form.bio} onChange={(e) => update("bio", e.target.value)} />
+              </div>
+              <button type="submit" className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-xl transition-all font-sans">Siguiente →</button>
+            </form>
           )}
 
-          {/* ── ELEGIR ── */}
-          {paso === "elegir" && Array.isArray(miembro) && (
-            <div className="space-y-3">
-              <div className="text-center py-2">
-                <p className="text-2xl mb-2">👨‍👩‍👧‍👦</p>
-                <p className="text-green-700 font-semibold font-serif">¿Quién quiere editar su perfil?</p>
-              </div>
-              {miembro.map((m) => (
-                <button key={m.id} onClick={() => elegirMiembro(m)}
-                  className="w-full text-left bg-green-50 hover:bg-orange-50 border border-green-200 hover:border-orange-300 rounded-xl px-4 py-3 transition-all">
-                  <p className="font-bold text-green-900 font-serif text-sm">{m.nombre}</p>
-                  <p className="text-xs text-green-500 font-sans">
-                    {m.generacion?.toUpperCase()} · Rama {m.rama?.replace(/-/g, " ")}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* ── EDITAR ── */}
-          {paso === "editar" && (
-            <div>
-              <div className="flex flex-col items-center gap-2 pb-4 border-b border-green-100 mb-4">
-                <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-orange-200 bg-green-50 flex items-center justify-center">
-                  {fotoPreview ? <img src={fotoPreview} alt="foto" className="w-full h-full object-cover" /> : <span className="text-4xl">👤</span>}
-                </div>
-                <label className="cursor-pointer bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 rounded-xl px-4 py-1.5 text-xs font-semibold font-sans">
-                  📸 {fotoPreview ? "Cambiar foto" : "Subir foto"}
-                  <input type="file" accept="image/*" className="hidden" onChange={handleFoto} />
-                </label>
-                <p className="font-bold text-green-900 font-serif">{form.nombre}</p>
-              </div>
-
-              <div className="flex gap-1 bg-green-50 rounded-xl p-1 mb-4">
-                {["datos", "conexiones"].map((t) => (
-                  <button key={t} onClick={() => setTab(t)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-semibold font-sans transition-all ${tab === t ? "bg-orange-500 text-white" : "text-green-700 hover:bg-green-100"}`}>
-                    {t === "datos" ? "📝 Mis datos" : "🔗 Mi familia"}
-                  </button>
-                ))}
-              </div>
-
-              {/* ── TAB DATOS ── */}
-              {tab === "datos" && (
-                <div className="space-y-3">
-                  <div>
-                    <label className={labelClass}>Nombre completo</label>
-                    <input type="text" className={inputClass} value={form.nombre || ""} onChange={(e) => update("nombre", e.target.value)} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Apodo</label>
-                    <input type="text" className={inputClass} value={form.apodo || ""} onChange={(e) => update("apodo", e.target.value)} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelClass}>Ciudad</label>
-                      <input type="text" className={inputClass} value={form.ciudad || ""} onChange={(e) => update("ciudad", e.target.value)} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Ocupación</label>
-                      <input type="text" className={inputClass} value={form.ocupacion || ""} onChange={(e) => update("ocupacion", e.target.value)} />
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Algo sobre ti</label>
-                    <textarea className={inputClass + " resize-none"} rows={3} value={form.bio || ""} onChange={(e) => update("bio", e.target.value)} />
-                  </div>
-                </div>
-              )}
-
-              {/* ── TAB CONEXIONES ── */}
-              {tab === "conexiones" && (
-                <div className="space-y-4">
-                  {conexiones.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-green-700 font-sans uppercase tracking-wide">Mis conexiones</p>
-                      {conexiones.map((c) => (
-                        <div key={c.id} className="flex items-center gap-3 bg-green-50 rounded-xl px-3 py-2">
-                          <span className="text-lg">👤</span>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-green-900 font-serif">{c.nombre}</p>
-                            <p className="text-xs text-orange-500 font-sans">{c.relacion}</p>
-                          </div>
-                          <button onClick={() => quitarConexion(c.id)}
-                            className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="text-xs font-semibold text-green-700 font-sans uppercase tracking-wide mb-2">Agregar familiar</p>
-                    <input type="text" className={inputClass} placeholder="Busca por nombre o apodo..."
-                      value={busquedaFamiliar} onChange={(e) => { setBusquedaFamiliar(e.target.value); setAgregando(null); }} />
-                  </div>
-
-                  {busquedaFamiliar && (
-                    <div className="space-y-2">
-                      {familiaresFiltered.length === 0 ? (
-                        <p className="text-xs text-green-400 font-sans text-center py-2">No se encontraron resultados</p>
-                      ) : (
-                        familiaresFiltered.map((m) => (
-                          <div key={m.id}>
-                            <button onClick={() => setAgregando(agregando?.id === m.id ? null : m)}
-                              className={`w-full text-left rounded-xl px-3 py-2 border transition-all ${agregando?.id === m.id ? "bg-orange-50 border-orange-300" : "bg-green-50 border-green-200 hover:border-orange-200"}`}>
-                              <p className="text-sm font-semibold text-green-900 font-serif">{m.nombre}</p>
-                              <p className="text-xs text-green-500 font-sans">
-                                {m.generacion?.toUpperCase()} · Rama {m.rama?.replace(/-/g, " ")}
-                              </p>
-                            </button>
-                            {agregando?.id === m.id && (
-                              <div className="mt-1 p-2 bg-orange-50 rounded-xl border border-orange-200">
-                                <p className="text-xs text-orange-600 font-sans mb-2">¿Qué relación tiene contigo?</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {RELACIONES.map((r) => (
-                                    <button key={r} onClick={() => agregarConexion(m, r)}
-                                      className="px-2 py-1 bg-white border border-orange-300 hover:bg-orange-500 hover:text-white text-orange-700 rounded-lg text-xs font-sans transition-all">
-                                      {r}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {conexiones.length === 0 && !busquedaFamiliar && (
-                    <div className="text-center py-4">
-                      <p className="text-3xl mb-2">🔗</p>
-                      <p className="text-green-500 text-sm font-sans">Busca a tus familiares arriba para conectarte con ellos</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-4 mt-4 border-t border-green-100">
-                <button onClick={() => setPaso("buscar")} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">← Atrás</button>
-                <button onClick={guardar} disabled={guardando}
-                  className={`flex-1 font-bold py-3 rounded-xl font-sans transition-all ${guardando ? "bg-green-300 text-white cursor-wait" : "bg-orange-500 hover:bg-orange-400 text-white"}`}>
-                  {guardando ? "Guardando..." : "Guardar ✓"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── LISTO ── */}
-          {paso === "listo" && (
-            <div className="text-center space-y-4 py-4">
-              <div className="text-5xl mb-2">✅</div>
-              <h2 className="text-2xl font-bold text-green-900 font-serif">¡Perfil actualizado!</h2>
-              <p className="text-green-600 text-sm font-sans">Tus datos y conexiones familiares quedaron guardados</p>
-              {fotoPreview && (
-                <div className="flex justify-center">
-                  <img src={fotoPreview} alt="foto" className="w-20 h-20 rounded-full object-cover border-4 border-orange-200" />
-                </div>
-              )}
-              {conexiones.length > 0 && (
-                <div className="bg-green-50 rounded-xl p-3 text-left">
-                  <p className="text-xs text-green-600 font-sans font-semibold mb-2">🔗 Tus conexiones:</p>
-                  {conexiones.map((c) => (
-                    <p key={c.id} className="text-sm text-green-800 font-sans">• {c.nombre} <span className="text-orange-500">({c.relacion})</span></p>
+          {/* ── STEP 2 ── */}
+          {step === 2 && (
+            <div className="space-y-5">
+              <div>
+                <label className={labelClass}>¿Cuáles son tus intereses?</label>
+                <span className={hintClass}>Puedes seleccionar varios</span>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {INTERESES.map((i) => (
+                    <button key={i} type="button" onClick={() => toggleItem("intereses", i)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-sans border transition-all ${form.intereses.includes(i) ? "bg-orange-500 text-white border-orange-500" : "bg-white text-green-700 border-green-200 hover:border-orange-300"}`}>
+                      {i}
+                    </button>
                   ))}
                 </div>
-              )}
+              </div>
+              <div>
+                <label className={labelClass}>¿Tienes mascotas?</label>
+                <span className={hintClass}>Puedes seleccionar varias</span>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {MASCOTAS.map((m) => (
+                    <button key={m} type="button"
+                      onClick={() => {
+                        if (m === "Ninguna") {
+                          update("mascotas", form.mascotas.includes("Ninguna") ? [] : ["Ninguna"]);
+                        } else {
+                          const sinNinguna = form.mascotas.filter(x => x !== "Ninguna");
+                          setForm(f => ({
+                            ...f,
+                            mascotas: sinNinguna.includes(m)
+                              ? sinNinguna.filter(x => x !== m)
+                              : [...sinNinguna, m]
+                          }));
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-sans border transition-all ${form.mascotas.includes(m) ? "bg-green-600 text-white border-green-600" : "bg-white text-green-700 border-green-200 hover:border-green-400"}`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setStep(1)} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">← Atrás</button>
+                <button onClick={handleSubmitStep2} disabled={guardando}
+                  className={`flex-1 font-bold py-3 rounded-xl font-sans transition-all ${guardando ? "bg-green-300 text-white cursor-wait" : "bg-orange-500 hover:bg-orange-400 text-white"}`}>
+                  {guardando ? "Guardando..." : "Registrarme ✓"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 3 ── */}
+          {step === 3 && (
+            <div className="text-center space-y-4">
+              <div className="text-5xl mb-2">🎉</div>
+              <h2 className="text-2xl font-bold text-green-900 font-serif">¡Bienvenido, {form.nombre.split(" ")[0]}!</h2>
+              <p className="text-green-600 text-sm font-sans">Ya eres parte oficial de La Gran Familia Villarreal</p>
+              <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 my-4">
+                <p className="text-xs text-green-500 font-sans mb-1">Tu código único</p>
+                <p className="text-2xl font-bold text-green-800 font-mono tracking-widest">{codigo}</p>
+                <p className="text-xs text-green-400 font-sans mt-1">Guardado en Firebase ✓</p>
+              </div>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+                <p className="text-xs text-orange-600 font-sans font-semibold">📱 Para editar tu perfil después</p>
+                <p className="text-sm text-orange-800 font-sans mt-1">Ve a <strong>👤 Mi Perfil</strong> y usa el número: <strong>{form.telefono}</strong></p>
+                {form.tutorRelacion && (
+                  <p className="text-xs text-orange-500 font-sans mt-1">Número registrado a nombre de: {form.tutorRelacion}</p>
+                )}
+              </div>
+              <div className="text-left space-y-2 text-sm font-sans border-t border-green-100 pt-4">
+                {[
+                  ["Nombre", form.nombre],
+                  ["Apodo", form.apodo || "—"],
+                  ["Ciudad", form.ciudad || "—"],
+                  ["Pareja", form.pareja || "—"],
+                  ["Rama", form.rama.replace(/-/g, " ") || "—"],
+                  ["Intereses", form.intereses.join(", ") || "—"],
+                  ["Mascotas", form.mascotas.join(", ") || "—"],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between">
+                    <span className="text-green-700 font-semibold">{k}</span>
+                    <span className="text-gray-600 capitalize">{v}</span>
+                  </div>
+                ))}
+              </div>
               <div className="flex gap-3 mt-4">
                 <button onClick={() => window.location.href = "/"} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl font-sans">🏠 Ir al inicio</button>
-                <button onClick={resetear} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">Actualizar otro</button>
+                <button onClick={handleReset} className="flex-1 border border-green-200 text-green-700 font-bold py-3 rounded-xl font-sans hover:bg-green-50">Registrar otro</button>
               </div>
             </div>
           )}
