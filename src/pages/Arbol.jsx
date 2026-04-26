@@ -48,7 +48,7 @@ function DetailPanel({ member, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl leading-none font-sans">×</button>
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl leading-none font-sans">x</button>
         <div className="flex flex-col items-center mb-4">
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-2 overflow-hidden"
@@ -63,7 +63,7 @@ function DetailPanel({ member, onClose }) {
           {member.apodo && <p className="text-orange-500 italic text-sm font-sans">"{member.apodo}"</p>}
           {member.nickname && !member.apodo && <p className="text-orange-500 italic text-sm font-sans">"{member.nickname}"</p>}
           {member.fallecido && (
-            <span className="mt-1 text-xs bg-slate-100 text-slate-500 px-3 py-0.5 rounded-full font-sans">In memoriam †</span>
+            <span className="mt-1 text-xs bg-slate-100 text-slate-500 px-3 py-0.5 rounded-full font-sans">In memoriam</span>
           )}
           {member.memoriam && (
             <p className="mt-2 text-xs text-purple-500 font-sans italic text-center">{member.memoriam}</p>
@@ -96,7 +96,7 @@ function DetailPanel({ member, onClose }) {
           )}
           {ocupacion && (
             <div className="flex justify-between">
-              <span className="text-green-700 font-semibold">Ocupación</span>
+              <span className="text-green-700 font-semibold">Ocupacion</span>
               <span className="text-gray-700">{ocupacion}</span>
             </div>
           )}
@@ -120,7 +120,7 @@ function DetailPanel({ member, onClose }) {
           )}
           {member.generacion && (
             <div className="flex justify-between">
-              <span className="text-green-700 font-semibold">Generación</span>
+              <span className="text-green-700 font-semibold">Generacion</span>
               <span className="text-gray-700">{member.generacion.toUpperCase()}</span>
             </div>
           )}
@@ -136,14 +136,14 @@ function DetailPanel({ member, onClose }) {
 const IN_MEMORIAM = [
   {
     id: "memoriam-mariana",
-    name: "Mariana Marcela Vázquez Montemayor",
+    name: "Mariana Marcela Vazquez Montemayor",
     nickname: "Mariana",
     shortName: "Mariana",
     fallecido: true,
     fallecidoDate: "Mayo 2025",
     emoji: "🕊️",
     color: "#a855f7",
-    pareja: "Carlos López Villarreal (G3 · Rama Dora Irma)",
+    pareja: "Carlos Lopez Villarreal (G3 - Rama Dora Irma)",
     branch: "dora-irma",
     memoriam: "Las estrellas que no se apagan 💙",
     bio: "Mariana sembró amor en los hijos de Carlos, y ese lazo permanece vivo como parte de su legado.",
@@ -175,7 +175,6 @@ export default function Arbol() {
   const hijosVivos = hijos.filter((h) => !h.fallecido);
   const hijosFallecidos = hijos.filter((h) => h.fallecido);
 
-  // Agrupar G3+ por rama
   const miembrosPorRama = {};
   miembrosFirebase
     .filter((m) => ["g3", "g4", "g5"].includes(m.generacion))
@@ -195,7 +194,7 @@ export default function Arbol() {
     <div className="min-h-screen bg-green-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-green-900 font-serif">🌳 Árbol Familiar Villarreal</h1>
+          <h1 className="text-3xl font-bold text-green-900 font-serif">🌳 Arbol Familiar Villarreal</h1>
           <p className="text-green-600 text-sm mt-1 font-sans">Haz clic en cualquier miembro para ver su perfil</p>
         </div>
 
@@ -203,7 +202,7 @@ export default function Arbol() {
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px flex-1 bg-green-300" />
-            <span className="text-xs font-bold text-green-700 uppercase tracking-widest font-sans bg-green-100 px-3 py-1 rounded-full border border-green-200">G1 · Fundadores</span>
+            <span className="text-xs font-bold text-green-700 uppercase tracking-widest font-sans bg-green-100 px-3 py-1 rounded-full border border-green-200">G1 - Fundadores</span>
             <div className="h-px flex-1 bg-green-300" />
           </div>
           <div className="flex justify-center gap-6">
@@ -223,4 +222,110 @@ export default function Arbol() {
         <div className="mb-4">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px flex-1 bg-green-300" />
-            <span className="text-xs font-bold text-green-700 uppercase tracking-widest font-sans bg-green-100 px-3 py-1 rounded-full border border-green-200">G2 · Los 14
+            <span className="text-xs font-bold text-green-700 uppercase tracking-widest font-sans bg-green-100 px-3 py-1 rounded-full border border-green-200">G2 - Los 14 Hijos</span>
+            <div className="h-px flex-1 bg-green-300" />
+          </div>
+          <div className="flex flex-wrap justify-center gap-3 pt-3">
+            {hijosVivos.map((h) => (
+              <MemberNode key={h.id} member={h} onClick={setSelected} selected={selected} />
+            ))}
+          </div>
+          {hijosFallecidos.length > 0 && (
+            <div className="mt-4">
+              <p className="text-center text-xs text-slate-400 font-sans mb-2">In memoriam</p>
+              <div className="flex flex-wrap justify-center gap-3">
+                {hijosFallecidos.map((h) => (
+                  <MemberNode key={h.id} member={h} onClick={setSelected} selected={selected} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* G3+ por rama */}
+        <div className="mt-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-px flex-1 bg-green-300" />
+            <span className="text-xs font-bold text-green-700 uppercase tracking-widest font-sans bg-green-100 px-3 py-1 rounded-full border border-green-200">G3-G4-G5 - Nietos, Bisnietos y Tataranietos</span>
+            <div className="h-px flex-1 bg-green-300" />
+          </div>
+
+          {cargando ? (
+            <div className="text-center py-8">
+              <p className="text-green-400 text-sm font-sans animate-pulse">Cargando familia...</p>
+            </div>
+          ) : totalG3mas === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed border-green-200 rounded-2xl bg-white/50">
+              <p className="text-green-400 text-lg mb-1">🌱</p>
+              <p className="text-green-600 font-semibold font-serif">G3 - Nietos</p>
+              <p className="text-green-400 text-xs font-sans mt-1">Se agregaran conforme la familia se registre</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {HIJOS.filter((h) => miembrosPorRama[h.branch]?.length > 0).map((h) => (
+                <div key={h.id} className="bg-white rounded-2xl border border-green-100 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm">{h.fallecido ? "🕊️" : "👤"}</span>
+                    <p className="text-sm font-bold text-green-800 font-serif">Rama {h.shortName}</p>
+                    <span className="text-xs text-green-400 font-sans">- {miembrosPorRama[h.branch].length} registrado(s)</span>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {miembrosPorRama[h.branch].map((m) => (
+                      <MemberNode key={m.id} member={m} onClick={setSelected} selected={selected} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* IN MEMORIAM especial */}
+        <div className="mt-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-px flex-1 bg-purple-200" />
+            <span className="text-xs font-bold text-purple-600 uppercase tracking-widest font-sans bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+              💙 Las estrellas que no se apagan
+            </span>
+            <div className="h-px flex-1 bg-purple-200" />
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {IN_MEMORIAM.map((m) => (
+              <MemberNode key={m.id} member={m} onClick={setSelected} selected={selected} />
+            ))}
+          </div>
+          <p className="text-center text-xs text-purple-400 font-sans mt-3">Siempre presentes en nuestra familia 🕊️</p>
+        </div>
+
+        {/* Stats */}
+        <div className="mt-8 grid grid-cols-3 gap-3">
+          {[
+            { label: "Generaciones", value: "G1-G5" },
+            { label: "Registrados", value: totalRegistrados },
+            { label: "G3-G4-G5", value: totalG3mas },
+          ].map((s) => (
+            <div key={s.label} className="bg-white rounded-xl border border-green-100 p-3 text-center shadow-sm">
+              <p className="text-2xl font-bold text-green-800 font-serif">{s.value}</p>
+              <p className="text-xs text-green-500 font-sans mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Leyenda */}
+        <div className="mt-4 flex flex-wrap justify-center gap-4">
+          {[
+            { gen: "G3 - Nietos", color: "#16a34a" },
+            { gen: "G4 - Bisnietos", color: "#0891b2" },
+            { gen: "G5 - Tataranietos", color: "#7c3aed" },
+          ].map((l) => (
+            <div key={l.gen} className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full" style={{ background: l.color }} />
+              <span className="text-xs text-gray-500 font-sans">{l.gen}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <DetailPanel member={selected} onClose={() => setSelected(null)} />
+    </div>
+  );
+}
